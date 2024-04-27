@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 def clean_data(file_path = '../data/skylab_instagram_datathon_dataset.csv'):
     df = pd.read_csv(file_path, header=0, sep=";")
@@ -34,5 +35,17 @@ def clean_data(file_path = '../data/skylab_instagram_datathon_dataset.csv'):
     df.drop_duplicates(inplace=True) # Duplicate lines because of compset
     df.replace(-1, float('nan'), inplace=True) # turn back to NaN
     df.sort_values(by=['business_entity_doing_business_as_name', 'period_end_date'], inplace=True)
+    df.reset_index(drop=True, inplace=True)
     
     return df, df_brands, df_allbrands, brands, compsets, compset_groups, groups_bycompset
+
+
+def missing(df):
+    df_missing = df.drop(columns=['period_end_date'])
+    df_missing = df_missing.groupby('business_entity_doing_business_as_name').agg(lambda x: np.isnan(x).sum())
+    df_missing.reset_index(inplace=True)
+    columns = df_missing.columns.tolist()
+    columns[1:] = [column + '_NaNs' for column in columns[1:]]  # Add '_NaNs' to each column name except the first
+    df_missing.columns = columns
+
+    return df_missing
