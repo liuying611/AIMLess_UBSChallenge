@@ -78,3 +78,108 @@ def derivatives_data(df):
         df_curvature.rename(columns={ parameter : f'curvature in {parameters[i]}'}, inplace=True)
     
     return df_rate_of_change, df_curvature
+
+def missing_values(df):
+    '''''
+    comment
+    '''''
+    # Count the number of rows with at least one NaN value across any column and print
+    rows_with_nan = df.isna().any(axis=1).sum()
+    print("Number of rows with at least one NaN before cleaning:", rows_with_nan)
+
+    # Function to remove leading NaN-series in 'followers' for each group(business)
+    def remove_leading_nans(group):
+        # Get the first index where 'followers' is not NaN
+        first_valid_index = group['followers'].first_valid_index()
+        # If all are NaNs, return an empty DataFrame from this group
+        if first_valid_index is None:
+            return pd.DataFrame()
+        # Return the DataFrame starting from the first non-NaN 'followers' row
+        return group.loc[first_valid_index:]
+
+    # Apply the function to each group and concatenate the results
+    cleaned_df = df.groupby('business_entity_doing_business_as_name', group_keys=False).apply(remove_leading_nans)
+
+    # Count the number of rows with at least one NaN value across any column
+    rows_with_nan = cleaned_df.isna().any(axis=1).sum()
+    print("Number of rows with at least one NaN after dropping series of Nan's at beginning of businesses:", rows_with_nan)
+
+    cleaned_df = cleaned_df.reset_index(drop=True)
+
+    #How long are the remaining series of Nan's in each column?
+    def calculate_nan_series_lengths_indices_and_total(_df):
+        # Initialize a dictionary to store the lengths of NaN series and their indices for each column
+        nan_series_details = {col: [] for col in _df.columns if _df[col].isna().any()}
+        total_nan_count = 0
+        # Iterate through each column that contains NaN
+        for col in nan_series_details.keys():
+            current_series_length = 0
+            series_start_index = None
+            previous_business = None
+            # Iterate through each row
+            for idx, row in _df.iterrows():
+                if pd.isna(row[col]):
+                    # Check if we've moved to a new business
+                    if row['business_entity_doing_business_as_name'] != previous_business:
+                        if current_series_length > 0:
+                            # Save the length and indices of the previous series before starting a new one
+                            nan_series_details[col].append((current_series_length, series_start_index, idx - 1))
+                            total_nan_count += current_series_length
+                        # Reset the series length for the new business and record start index
+                        current_series_length = 1
+                        series_start_index = idx
+                    else:
+                        # Increment the series length
+                        current_series_length += 1
+                else:
+                    if current_series_length > 0:
+                        # End of a series, append its length and indices to the list and add to total count
+                        nan_series_details[col].append((current_series_length, series_start_index, idx - 1))
+                        total_nan_count += current_series_length
+                        current_series_length = 0
+                        series_start_index = None
+                
+                # Update the previous business name
+                previous_business = row['business_entity_doing_business_as_name']
+            
+            # Check if the last row in the dataframe was a NaN and needs to be added
+            if current_series_length > 0:
+                nan_series_details[col].append((current_series_length, series_start_index, _df.index[-1]))
+                total_nan_count += current_series_length
+
+        return nan_series_details, total_nan_count
+
+    nan_series_info, total_nan = calculate_nan_series_lengths_indices_and_total(cleaned_df)
+    #print(nan_series_info)
+    print("Total NaN entries:", total_nan)
+
+    #manually drop 4 remaining series at end of groups
+    indices_to_drop = list(range(20769, 20842)) + list(range(30040, 30082)) + list(range(34058, 34146)) + list(range(71279, 71309))
+    cleaned_df = cleaned_df.drop(indices_to_drop)
+
+    #How many remaining number of rows with Nan's are there?
+    # Calculate the number of NaNs per row
+    nan_counts_per_row = cleaned_df.isna().sum(axis=1)
+
+    # Count how many rows have exactly 4, 3, and 2 NaNs
+    nan_4 = (nan_counts_per_row == 4).sum()
+    nan_3 = (nan_counts_per_row == 3).sum()
+    nan_2 = (nan_counts_per_row == 2).sum()
+    nan_1 = (nan_counts_per_row == 1).sum()
+
+    print("\n Remaining number of rows with Nan that are not at beginning or end:")
+    print("Number of rows with 4 NaNs:", nan_4)
+    print("Number of rows with 3 NaNs:", nan_3)
+    print("Number of rows with 2 NaNs:", nan_2)
+    print("Number of rows with 1 NaNs:", nan_1)
+
+    
+
+    print("Total remaining rows with at least one Nan: ", nan_1+nan_2+nan_3+nan_4)
+    print("Total entries being an Nan: ",nan_1+2*nan_2+3*nan_3+4*nan_4)
+
+    #retun final cleaned_df
+    return cleaned_df
+
+
+
