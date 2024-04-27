@@ -3,6 +3,7 @@ import numpy as np
 
 def clean_data(file_path = '../data/skylab_instagram_datathon_dataset.csv'):
     df = pd.read_csv(file_path, header=0, sep=";")
+    df['period_end_date'] = pd.to_datetime(df['period_end_date']) # turn to datetime
     df.drop(columns=['period', 'calculation_type'], inplace=True) # redundant
     df_allbrands = df[df['business_entity_doing_business_as_name'] == 'All Brands'].copy() # put the summary data in a different df
     df_allbrands.drop(columns=['business_entity_doing_business_as_name', 'legal_entity_name', 'domicile_country_name',
