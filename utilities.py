@@ -78,3 +78,24 @@ def derivatives_data(df):
         df_curvature.rename(columns={ parameter : f'curvature in {parameters[i]}'}, inplace=True)
     
     return df_rate_of_change, df_curvature
+
+def normalized_data_frame(df, df_allbrands = clean_data()[2]):
+    #create a new dataframe to make space for the normalized data
+    df_normalized = df.copy()
+    # Convert the 'period_end_date' column to datetime objects
+    df_normalized['period_end_date'] = pd.to_datetime(df_normalized['period_end_date'])
+
+    #Normalization
+    #e.g. divide the number of followers for a company by the sum of all followers of all companies
+    for date in df_normalized['period_end_date'].unique():
+        # Get the indices where the 'period_end_date' matches the current date
+        indices = (df_normalized['period_end_date'] == date)
+        
+        # Normalize each column in df_normalized by the corresponding value in df_allbrands_total
+        df_normalized.loc[indices, 'followers'] /= df_allbrands_total.loc[df_allbrands_total['period_end_date'] == date, 'followers'].values[0]
+        df_normalized.loc[indices, 'pictures']  /= df_allbrands_total.loc[df_allbrands_total['period_end_date'] == date, 'pictures'].values[0]
+        df_normalized.loc[indices, 'videos']    /= df_allbrands_total.loc[df_allbrands_total['period_end_date'] == date, 'videos'].values[0]
+        df_normalized.loc[indices, 'comments']  /= df_allbrands_total.loc[df_allbrands_total['period_end_date'] == date, 'comments'].values[0]
+        df_normalized.loc[indices, 'likes']     /= df_allbrands_total.loc[df_allbrands_total['period_end_date'] == date, 'likes'].values[0]
+        
+    return df_normalized
