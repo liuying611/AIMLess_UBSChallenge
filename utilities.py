@@ -1,6 +1,10 @@
 import pandas as pd
 import numpy as np
 
+
+##############################################################################################
+
+
 def clean_data(file_path = '../data/skylab_instagram_datathon_dataset.csv'):
     df = pd.read_csv(file_path, header=0, sep=";")
     df['period_end_date'] = pd.to_datetime(df['period_end_date']) # turn to datetime
@@ -41,6 +45,9 @@ def clean_data(file_path = '../data/skylab_instagram_datathon_dataset.csv'):
     return df, df_brands, df_allbrands, brands, compsets, compset_groups, groups_bycompset
 
 
+##############################################################################################
+
+
 def missing(df):
     df_missing = df.drop(columns=['period_end_date'])
     df_missing = df_missing.groupby('business_entity_doing_business_as_name').agg(lambda x: np.isnan(x).sum())
@@ -50,6 +57,10 @@ def missing(df):
     df_missing.columns = columns
 
     return df_missing
+
+
+##############################################################################################
+
 
 def derivatives_data(df):
 
@@ -78,6 +89,30 @@ def derivatives_data(df):
         df_curvature.rename(columns={ parameter : f'curvature in {parameters[i]}'}, inplace=True)
     
     return df_rate_of_change, df_curvature
+
+def normalized_data_frame(df, df_allbrands = clean_data()[2]):
+    #create a new dataframe to make space for the normalized data
+    df_normalized = df.copy()
+    # Convert the 'period_end_date' column to datetime objects
+    df_normalized['period_end_date'] = pd.to_datetime(df_normalized['period_end_date'])
+
+    #Normalization
+    #e.g. divide the number of followers for a company by the sum of all followers of all companies
+    for date in df_normalized['period_end_date'].unique():
+        # Get the indices where the 'period_end_date' matches the current date
+        indices = (df_normalized['period_end_date'] == date)
+        
+        # Normalize each column in df_normalized by the corresponding value in df_allbrands_total
+        df_normalized.loc[indices, 'followers'] /= df_allbrands_total.loc[df_allbrands_total['period_end_date'] == date, 'followers'].values[0]
+        df_normalized.loc[indices, 'pictures']  /= df_allbrands_total.loc[df_allbrands_total['period_end_date'] == date, 'pictures'].values[0]
+        df_normalized.loc[indices, 'videos']    /= df_allbrands_total.loc[df_allbrands_total['period_end_date'] == date, 'videos'].values[0]
+        df_normalized.loc[indices, 'comments']  /= df_allbrands_total.loc[df_allbrands_total['period_end_date'] == date, 'comments'].values[0]
+        df_normalized.loc[indices, 'likes']     /= df_allbrands_total.loc[df_allbrands_total['period_end_date'] == date, 'likes'].values[0]
+        
+    return df_normalized
+
+##############################################################################################
+
 
 def missing_values(df):
     '''''
@@ -182,4 +217,4 @@ def missing_values(df):
     return cleaned_df
 
 
-
+##############################################################################################
