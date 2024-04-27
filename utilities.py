@@ -49,3 +49,31 @@ def missing(df):
     df_missing.columns = columns
 
     return df_missing
+
+def derivatives_data(df):
+
+    """Data Frame df_rate_of_change containing the 1st time derivative in parameters pictures, videos, comments, likes and followers"""
+    #create copy for dataframe consisting of 1st derivative
+    df_rate_of_change = df.copy()
+    parameters = ['followers', 'pictures', 'videos', 'comments', 'likes']
+    #I AM NOT YET GOING TO FILL NA'S WITH ZEROS BECAUSE THERE COULD BE OTHERS WHICH WE DONT WANT TO FILL
+    #add the first time derivative to each column
+    df_rate_of_change['change in followers'] = df_rate_of_change['followers'].diff()
+    df_rate_of_change.rename(columns={'pictures': 'change in pictures'}, inplace=True)
+    df_rate_of_change.rename(columns={'videos': 'change in videos'}, inplace=True)
+    df_rate_of_change.rename(columns={'comments': 'change in comments'}, inplace=True)
+    df_rate_of_change.rename(columns={'likes': 'change in likes'}, inplace=True)
+    df_rate_of_change.drop(columns=['followers'], inplace=True)
+
+    """Data Frame df_curvature containing the 2nd time derivative in parameters pictures, videos, comments, likes and followers"""
+    new_parameters = ['change in followers', 'change in pictures', 'change in videos', 'change in comments', 'change in likes']
+    #create copy for dataframe consisting of 2nd derivative
+    df_curvature = df_rate_of_change.copy()
+
+    #I AM NOT YET GOING TO FILL NA'S WITH ZEROS BECAUSE THERE COULD BE OTHERS WHICH WE DONT WANT TO FILL
+    #add the 2nd time derivative in the parameters to each column
+    for i, parameter in enumerate(new_parameters):
+        df_curvature[parameter] = df_rate_of_change[parameter].diff()
+        df_curvature.rename(columns={ parameter : f'curvature in {parameters[i]}'}, inplace=True)
+    
+    return df_rate_of_change, df_curvature
