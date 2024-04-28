@@ -233,6 +233,8 @@ def normalization(df, df_allbrands=clean_data()[2]):
     Normalize the data frame by dividing each column by the corresponding 
     sum of all columns using df_allbrands for each date.
     """
+    df_allbrands_total = df_allbrands.copy()
+    df_allbrands_total = df_allbrands_total[df_allbrands_total['compset'] == 'Study (All Brands)']
     # Create a new dataframe to make space for the normalized data
     df_normalized = df.copy()
     # Convert the 'period_end_date' column to datetime objects
