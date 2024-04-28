@@ -48,13 +48,18 @@ def clean_data(file_path = '../data/skylab_instagram_datathon_dataset.csv'):
 ##############################################################################################
 
 
-def missing(df):
+def missing_df(df):
+    entries_per_business = df['business_entity_doing_business_as_name'].value_counts()
+
     df_missing = df.drop(columns=['period_end_date'])
+    df_missing.insert(1, 'Total Entries:', entries_per_business)
     df_missing = df_missing.groupby('business_entity_doing_business_as_name').agg(lambda x: np.isnan(x).sum())
     df_missing.reset_index(inplace=True)
     columns = df_missing.columns.tolist()
-    columns[1:] = [column + '_NaNs' for column in columns[1:]]  # Add '_NaNs' to each column name except the first
+    columns[2:] = ['Missing ' + column + ":" for column in columns[2:]]  # Add '_NaNs' to each column name except the first
     df_missing.columns = columns
+
+    df_missing.rename(columns={'business_entity_doing_business_as_name': 'Business'}, inplace=True)
 
     return df_missing
 
