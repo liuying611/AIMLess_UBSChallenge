@@ -6,20 +6,46 @@ import math
 ##############################################################################################
 
 
-def clean_data(file_path = '../data/skylab_instagram_datathon_dataset.csv'):
+def clean_data(file_path='../data/skylab_instagram_datathon_dataset.csv'):
+    """
+    This function clean_data performs several operations to clean and preprocess a DataFrame read from a CSV file. Here's a breakdown of each step:
+
+    Read Data: Reads the CSV file into a DataFrame using pandas read_csv() function.
+    Convert to Datetime: Converts the 'period_end_date' column to datetime format using pd.to_datetime().
+    Drop Redundant Columns: Drops the columns 'period' and 'calculation_type' from the DataFrame as they are considered redundant.
+    Separate Summary Data: Copies the rows where the 'business_entity_doing_business_as_name' column is 'All Brands' into a separate DataFrame called df_allbrands. Then removes these rows from the main DataFrame.
+    Extract Unique Values: Extracts unique values of 'business_entity_doing_business_as_name', 'compset_group', and 'compset' columns.
+    Grouping by Compset: Creates a dictionary groups_bycompset where each key is a unique 'compset' value and the corresponding value is an array of unique 'compset_group' values.
+    Aggregate Brand Information: Creates a DataFrame df_brands containing aggregated brand information. It groups the DataFrame by 'business_entity_doing_business_as_name' and aggregates other columns by selecting the first value and creating a sorted list of unique 'compset' values.
+    Remove Redundant Columns (Again): Drops brand-related columns from the main DataFrame.
+    Sort and Reset Index: Sorts the DataFrame by 'business_entity_doing_business_as_name' and 'period_end_date', then resets the index.
+    Finally, the function returns several objects: the cleaned DataFrame (df), DataFrame containing brand information (df_brands), DataFrame containing summary data for all brands (df_allbrands), lists of unique brands, compsets, and compset groups, and a dictionary mapping compsets to compset groups (groups_bycompset).
+
+    :returns:
+    df: main dataframe containing only the period_end_date, business_entity_doing_business_as_name and the five numerical quantities without any redundancies. The data is sorted by date and Brand. There are no NANs in period_end_date and business_entity_doing_business_as_name.
+    df_brands: Contains the meta-information for each brand (business_entity_doing_business_as_name), namely the compset_group, a list of compsets, legal_entity_name, domicile_country_name, ultimate_parent_legal_entity_name and primary_exchange_name.
+    df_allbrands: The rows of df with compset='All Brands'
+    brands: List of all brands (business_entity_doing_business_as_name)
+    compsets: List of all compsets
+    compset_groups: List of all compset_groups
+    groups_bycompset: Dictionary, defining in which compset_group(s) each compset occurs.
+    """
+
     df = pd.read_csv(file_path, header=0, sep=";")
-    df['period_end_date'] = pd.to_datetime(df['period_end_date']) # turn to datetime
-    df.drop(columns=['period', 'calculation_type'], inplace=True) # redundant
-    df_allbrands = df[df['business_entity_doing_business_as_name'] == 'All Brands'].copy() # put the summary data in a different df
+    df['period_end_date'] = pd.to_datetime(df['period_end_date'])  # turn to datetime
+    df.drop(columns=['period', 'calculation_type'], inplace=True)  # redundant
+    df_allbrands = df[
+        df['business_entity_doing_business_as_name'] == 'All Brands'].copy()  # put the summary data in a different df
     df_allbrands.drop(columns=['business_entity_doing_business_as_name', 'legal_entity_name', 'domicile_country_name',
-                               'ultimate_parent_legal_entity_name', 'primary_exchange_name'], inplace=True) # redundant
-    df.drop(df[df['business_entity_doing_business_as_name'] == 'All Brands'].index, inplace=True) # remove summary data from main df
+                               'ultimate_parent_legal_entity_name', 'primary_exchange_name'], inplace=True)  # redundant
+    df.drop(df[df['business_entity_doing_business_as_name'] == 'All Brands'].index,
+            inplace=True)  # remove summary data from main df
 
-    brands = df['business_entity_doing_business_as_name'].unique() # list of the brands
-    compset_groups = df['compset_group'].unique() # list of the compset_groups
-    compsets = df['compset'].unique() # list of the compsets
+    brands = df['business_entity_doing_business_as_name'].unique()  # list of the brands
+    compset_groups = df['compset_group'].unique()  # list of the compset_groups
+    compsets = df['compset'].unique()  # list of the compsets
 
-    groups_bycompset = {} # dictionary that shows which compset is in which compset group(s)
+    groups_bycompset = {}  # dictionary that shows which compset is in which compset group(s)
     for compset in compsets:
         df_compset = df[df['compset'] == compset]
         groups_bycompset[compset] = df_compset['compset_group'].unique()
@@ -29,20 +55,21 @@ def clean_data(file_path = '../data/skylab_instagram_datathon_dataset.csv'):
                     'domicile_country_name', 'ultimate_parent_legal_entity_name', 'primary_exchange_name']].copy()
     df_brands = df_brands.groupby('business_entity_doing_business_as_name').agg({
         'compset_group': 'first',
-        'compset': lambda x: sorted(list(set(x))), # collapse all compsets in one row with a list of compsets
+        'compset': lambda x: sorted(list(set(x))),  # collapse all compsets in one row with a list of compsets
         'legal_entity_name': 'first',
         'domicile_country_name': 'first',
         'ultimate_parent_legal_entity_name': 'first',
         'primary_exchange_name': 'first'
     }).reset_index()
     df.drop(columns=['compset_group', 'compset', 'legal_entity_name', 'domicile_country_name',
-                     'ultimate_parent_legal_entity_name', 'primary_exchange_name'], inplace=True) # remove the brand info from the main df
-    df.fillna(-1, inplace=True) # replace NAs with -1 (to enable drop_duplicates)
-    df.drop_duplicates(inplace=True) # Duplicate lines because of compset
-    df.replace(-1, float('nan'), inplace=True) # turn back to NaN
+                     'ultimate_parent_legal_entity_name', 'primary_exchange_name'],
+            inplace=True)  # remove the brand info from the main df
+    df.fillna(-1, inplace=True)  # replace NAs with -1 (to enable drop_duplicates)
+    df.drop_duplicates(inplace=True)  # Duplicate lines because of compset
+    df.replace(-1, float('nan'), inplace=True)  # turn back to NaN
     df.sort_values(by=['business_entity_doing_business_as_name', 'period_end_date'], inplace=True)
     df.reset_index(drop=True, inplace=True)
-    
+
     return df, df_brands, df_allbrands, brands, compsets, compset_groups, groups_bycompset
 
 
@@ -259,26 +286,46 @@ def normalization(df, df_allbrands=clean_data()[2]):
 
 
 def ranking_followers(df, df_brands, compset_groups):
+    """
+    This function ranking_followers performs the following tasks:
+
+    Create Dictionary of Brands by Compset Group: It creates a dictionary brands_by_cgroup where each key is a compset group, and the corresponding value is a list of brands contained in that compset group. It filters the brand DataFrame df_brands based on each compset group and extracts the list of brands.
+    Generate Rankings for Each Compset Group: It creates a dictionary cgroup_ranking where each key is a compset group. For each compset group, it filters the main DataFrame df to include only the rows corresponding to brands in that compset group, drops rows with missing 'followers' values, and then generates rankings ('FRanking') for each brand based on the number of followers. Rankings are generated for each date separately using the rank method, and NaN values are handled.
+    Calculate Difference in Rankings: It calculates the difference in rankings ('diff_FRanking') for each brand within each compset group. This is done by taking the difference of consecutive rankings using the diff method.
+    Blur Difference in Rankings: It calculates a blurred version of the difference in rankings ('diff_FRanking_blur') by taking the rolling mean with a window size of 5.
+    Normalize Blurred Difference in Rankings: It normalizes the blurred difference in rankings ('diff_FRanking_blur_norm') by dividing each value by the number of brands in the corresponding compset group.
+
+    :return:
+    cgroup_ranking: Dictionary, containing for each compset_group a dataframe with just the part of df with brands in that compset_group. Additional columns are added, specifying the ranking by followers of each brand in a certain compset_group for every week, the change in this ranking from week to week and blurred and normalized versions of the previous column.
+    brands_by_cgroup: Dictionary, containing the brands of each compset_group.
+
+    """
+
     brands_by_cgroup = {}  # dict: list of brands contained in each compset_group
     for group in compset_groups:
         brands_by_cgroup[group] = df_brands[df_brands['compset_group'] == group][
             'business_entity_doing_business_as_name'].tolist()
 
+    # Dictionary of data-frames. For each compset_group there is a dataframe containing just the part of df with brands in that compset_group
     cgroup_ranking = {cgroup: df[df['business_entity_doing_business_as_name'].isin(brands_by_cgroup[cgroup])].dropna(
         subset=['followers']).copy() for cgroup in compset_groups}
 
+    #Add Column of Follower Ranking amoung all the brands in one sector (compset_group)
     for cgroup in compset_groups:
         cgroup_ranking[cgroup]['FRanking'] = np.nan
         for date, data in cgroup_ranking[cgroup].groupby('period_end_date'):
-            cgroup_ranking[cgroup].loc[data.index, 'FRanking'] = data['followers'].rank(ascending=False,
-                                                                                        method='dense').astype(int)
+            cgroup_ranking[cgroup].loc[data.index, 'FRanking'] = data['followers'].rank(ascending=False,method='dense').astype(int)
+
+    #Add Column containing the difference in Follower Ranking from one week to the next
     for cgroup in compset_groups:
         grouped = cgroup_ranking[cgroup].groupby('business_entity_doing_business_as_name')
         cgroup_ranking[cgroup]['diff_FRanking'] = grouped['FRanking'].diff()
 
+    # Add Column containing the rolling mean of the previous column (difference in Follower Ranking). This is done to decrease the importance of single events and increase bigger trends.
     for cgroup in compset_groups:
         cgroup_ranking[cgroup]['diff_FRanking_blur'] = cgroup_ranking[cgroup]['diff_FRanking'].rolling(window=5, center=True).mean()
 
+    # Add Column containing the previous column normalized by the number of brands in the respective compset_group. Since it is more likely to move by many ranks in a sector (compset_group) with more brands, this is meant to make different compset_groups more comparable. This column is not used in the current Data Analysis.
     for cgroup in compset_groups:
         cgroup_ranking[cgroup]['diff_FRanking_blur_norm'] = cgroup_ranking[cgroup].apply(
             lambda row: row['diff_FRanking_blur'] / len(brands_by_cgroup[cgroup]), axis=1)
