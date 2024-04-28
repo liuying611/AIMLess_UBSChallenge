@@ -6,7 +6,7 @@ import math
 ##############################################################################################
 
 
-def clean_data(file_path='../data/skylab_instagram_datathon_dataset.csv'):
+def clean_data(file_path='../../data/skylab_instagram_datathon_dataset.csv'):
     """
     This function clean_data performs several operations to clean and preprocess a DataFrame read from a CSV file. Here's a breakdown of each step:
 
