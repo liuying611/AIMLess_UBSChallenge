@@ -49,19 +49,43 @@ def clean_data(file_path = '../data/skylab_instagram_datathon_dataset.csv'):
 
 
 def missing_df(df):
+    """
+    Processes the input DataFrame to count missing values for each business entity, include total data entries per business,
+    and format the output for clarity.
+    
+    The function drops the 'period_end_date' column, inserts a count of total entries for each business, computes the
+    sum of NaNs for each remaining column grouped by business, and reformats the column names to indicate missing data.
+    It also renames the 'business_entity_doing_business_as_name' to 'Business' for readability.
+    
+    Parameters:
+    df (DataFrame): A pandas DataFrame containing business data including a 'period_end_date' column and potentially missing values.
+    
+    Returns:
+    DataFrame: A transformed DataFrame with each business entity as rows, columns showing the count of NaNs for each remaining
+    column, the total entries per business, and reformatted column names.
+    """
+    # Count total entries for each business
     entries_per_business = df['business_entity_doing_business_as_name'].value_counts()
-
+    # Drop the 'period_end_date' column from the DataFrame
     df_missing = df.drop(columns=['period_end_date'])
+    # Insert a new column with total entries per business at position 1
     df_missing.insert(1, 'Total Entries:', entries_per_business)
+    # Group data by 'business_entity_doing_business_as_name' and calculate the sum of NaNs for each group
     df_missing = df_missing.groupby('business_entity_doing_business_as_name').agg(lambda x: np.isnan(x).sum())
+    # Reset the index to turn group labels into standard columns
     df_missing.reset_index(inplace=True)
+
+    # Modify the column names from the third column onwards to indicate they represent missing data counts
     columns = df_missing.columns.tolist()
-    columns[2:] = ['Missing ' + column + ":" for column in columns[2:]]  # Add '_NaNs' to each column name except the first
+    columns[2:] = ['Missing ' + column + ":" for column in columns[2:]]  # Enhance readability by adding 'Missing'
     df_missing.columns = columns
 
+    # Rename the 'business_entity_doing_business_as_name' column to 'Business' for better clarity
     df_missing.rename(columns={'business_entity_doing_business_as_name': 'Business'}, inplace=True)
 
+    # Return the modified DataFrame
     return df_missing
+
 
 
 ##############################################################################################
