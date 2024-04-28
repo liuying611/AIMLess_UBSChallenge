@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import math
 
 
 ##############################################################################################
@@ -246,3 +247,31 @@ def normalized_data_frame(df, df_allbrands = clean_data()[2]):
 
 
 ##############################################################################################
+
+
+def ranking_followers(df, df_brands, compset_groups):
+    brands_by_cgroup = {}  # dict: list of brands contained in each compset_group
+    for group in compset_groups:
+        brands_by_cgroup[group] = df_brands[df_brands['compset_group'] == group][
+            'business_entity_doing_business_as_name'].tolist()
+
+    cgroup_ranking = {cgroup: df[df['business_entity_doing_business_as_name'].isin(brands_by_cgroup[cgroup])].dropna(
+        subset=['followers']).copy() for cgroup in compset_groups}
+
+    for cgroup in compset_groups:
+        cgroup_ranking[cgroup]['FRanking'] = np.nan
+        for date, data in cgroup_ranking[cgroup].groupby('period_end_date'):
+            cgroup_ranking[cgroup].loc[data.index, 'FRanking'] = data['followers'].rank(ascending=False,
+                                                                                        method='dense').astype(int)
+    for cgroup in compset_groups:
+        grouped = cgroup_ranking[cgroup].groupby('business_entity_doing_business_as_name')
+        cgroup_ranking[cgroup]['diff_FRanking'] = grouped['FRanking'].diff()
+
+    for cgroup in compset_groups:
+        cgroup_ranking[cgroup]['diff_FRanking_blur'] = cgroup_ranking[cgroup]['diff_FRanking'].rolling(window=5, center=True).mean()
+
+    for cgroup in compset_groups:
+        cgroup_ranking[cgroup]['diff_FRanking_blur_norm'] = cgroup_ranking[cgroup].apply(
+            lambda row: row['diff_FRanking_blur'] / len(brands_by_cgroup[cgroup]), axis=1)
+
+    return cgroup_ranking, brands_by_cgroup
