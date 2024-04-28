@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import math
 
 
 ##############################################################################################
@@ -49,19 +50,43 @@ def clean_data(file_path = '../data/skylab_instagram_datathon_dataset.csv'):
 
 
 def missing_df(df):
+    """
+    Processes the input DataFrame to count missing values for each business entity, include total data entries per business,
+    and format the output for clarity.
+    
+    The function drops the 'period_end_date' column, inserts a count of total entries for each business, computes the
+    sum of NaNs for each remaining column grouped by business, and reformats the column names to indicate missing data.
+    It also renames the 'business_entity_doing_business_as_name' to 'Business' for readability.
+    
+    Parameters:
+    df (DataFrame): A pandas DataFrame containing business data including a 'period_end_date' column and potentially missing values.
+    
+    Returns:
+    DataFrame: A transformed DataFrame with each business entity as rows, columns showing the count of NaNs for each remaining
+    column, the total entries per business, and reformatted column names.
+    """
+    # Count total entries for each business
     entries_per_business = df['business_entity_doing_business_as_name'].value_counts()
-
+    # Drop the 'period_end_date' column from the DataFrame
     df_missing = df.drop(columns=['period_end_date'])
+    # Insert a new column with total entries per business at position 1
     df_missing.insert(1, 'Total Entries:', entries_per_business)
+    # Group data by 'business_entity_doing_business_as_name' and calculate the sum of NaNs for each group
     df_missing = df_missing.groupby('business_entity_doing_business_as_name').agg(lambda x: np.isnan(x).sum())
+    # Reset the index to turn group labels into standard columns
     df_missing.reset_index(inplace=True)
+
+    # Modify the column names from the third column onwards to indicate they represent missing data counts
     columns = df_missing.columns.tolist()
-    columns[2:] = ['Missing ' + column + ":" for column in columns[2:]]  # Add '_NaNs' to each column name except the first
+    columns[2:] = ['Missing ' + column + ":" for column in columns[2:]]  # Enhance readability by adding 'Missing'
     df_missing.columns = columns
 
+    # Rename the 'business_entity_doing_business_as_name' column to 'Business' for better clarity
     df_missing.rename(columns={'business_entity_doing_business_as_name': 'Business'}, inplace=True)
 
+    # Return the modified DataFrame
     return df_missing
+
 
 
 ##############################################################################################
@@ -172,13 +197,15 @@ def missing_values(df):
 
 
 def derivatives_data(df):
-
-    """Data Frame df_rate_of_change containing the 1st time derivative in parameters pictures, videos, comments, likes and followers"""
-    #create copy for dataframe consisting of 1st derivative
+    """
+    Data Frame df_rate_of_change containing the 1st time derivative 
+    in parameters pictures, videos, comments, likes, and followers
+    """
+    # Create a copy of the dataframe for the first derivative
     df_rate_of_change = df.copy()
     parameters = ['followers', 'pictures', 'videos', 'comments', 'likes']
-    #I AM NOT YET GOING TO FILL NA'S WITH ZEROS BECAUSE THERE COULD BE OTHERS WHICH WE DONT WANT TO FILL
-    #add the first time derivative to each column
+    
+    # Add the first time derivative to each column
     df_rate_of_change['change in followers'] = df_rate_of_change['followers'].diff()
     df_rate_of_change.rename(columns={'pictures': 'change in pictures'}, inplace=True)
     df_rate_of_change.rename(columns={'videos': 'change in videos'}, inplace=True)
@@ -186,27 +213,32 @@ def derivatives_data(df):
     df_rate_of_change.rename(columns={'likes': 'change in likes'}, inplace=True)
     df_rate_of_change.drop(columns=['followers'], inplace=True)
 
-    """Data Frame df_curvature containing the 2nd time derivative in parameters pictures, videos, comments, likes and followers"""
+    """
+    Data Frame df_curvature containing the 2nd time derivative 
+    in parameters pictures, videos, comments, likes, and followers
+    """
     new_parameters = ['change in followers', 'change in pictures', 'change in videos', 'change in comments', 'change in likes']
-    #create copy for dataframe consisting of 2nd derivative
+    # Create a copy for the dataframe consisting of the 2nd derivative
     df_curvature = df_rate_of_change.copy()
-
-    #I AM NOT YET GOING TO FILL NA'S WITH ZEROS BECAUSE THERE COULD BE OTHERS WHICH WE DONT WANT TO FILL
-    #add the 2nd time derivative in the parameters to each column
+    
+    # Add the 2nd time derivative in the parameters to each column
     for i, parameter in enumerate(new_parameters):
         df_curvature[parameter] = df_rate_of_change[parameter].diff()
         df_curvature.rename(columns={ parameter : f'curvature in {parameters[i]}'}, inplace=True)
     
     return df_rate_of_change, df_curvature
 
-def normalized_data_frame(df, df_allbrands = clean_data()[2]):
-    #create a new dataframe to make space for the normalized data
+def normalization(df, df_allbrands=clean_data()[2]):
+    """
+    Normalize the data frame by dividing each column by the corresponding 
+    sum of all columns using df_allbrands for each date.
+    """
+    # Create a new dataframe to make space for the normalized data
     df_normalized = df.copy()
     # Convert the 'period_end_date' column to datetime objects
     df_normalized['period_end_date'] = pd.to_datetime(df_normalized['period_end_date'])
 
-    #Normalization
-    #e.g. divide the number of followers for a company by the sum of all followers of all companies
+    # Normalization
     for date in df_normalized['period_end_date'].unique():
         # Get the indices where the 'period_end_date' matches the current date
         indices = (df_normalized['period_end_date'] == date)
@@ -222,3 +254,31 @@ def normalized_data_frame(df, df_allbrands = clean_data()[2]):
 
 
 ##############################################################################################
+
+
+def ranking_followers(df, df_brands, compset_groups):
+    brands_by_cgroup = {}  # dict: list of brands contained in each compset_group
+    for group in compset_groups:
+        brands_by_cgroup[group] = df_brands[df_brands['compset_group'] == group][
+            'business_entity_doing_business_as_name'].tolist()
+
+    cgroup_ranking = {cgroup: df[df['business_entity_doing_business_as_name'].isin(brands_by_cgroup[cgroup])].dropna(
+        subset=['followers']).copy() for cgroup in compset_groups}
+
+    for cgroup in compset_groups:
+        cgroup_ranking[cgroup]['FRanking'] = np.nan
+        for date, data in cgroup_ranking[cgroup].groupby('period_end_date'):
+            cgroup_ranking[cgroup].loc[data.index, 'FRanking'] = data['followers'].rank(ascending=False,
+                                                                                        method='dense').astype(int)
+    for cgroup in compset_groups:
+        grouped = cgroup_ranking[cgroup].groupby('business_entity_doing_business_as_name')
+        cgroup_ranking[cgroup]['diff_FRanking'] = grouped['FRanking'].diff()
+
+    for cgroup in compset_groups:
+        cgroup_ranking[cgroup]['diff_FRanking_blur'] = cgroup_ranking[cgroup]['diff_FRanking'].rolling(window=5, center=True).mean()
+
+    for cgroup in compset_groups:
+        cgroup_ranking[cgroup]['diff_FRanking_blur_norm'] = cgroup_ranking[cgroup].apply(
+            lambda row: row['diff_FRanking_blur'] / len(brands_by_cgroup[cgroup]), axis=1)
+
+    return cgroup_ranking, brands_by_cgroup
