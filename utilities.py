@@ -197,13 +197,15 @@ def missing_values(df):
 
 
 def derivatives_data(df):
-
-    """Data Frame df_rate_of_change containing the 1st time derivative in parameters pictures, videos, comments, likes and followers"""
-    #create copy for dataframe consisting of 1st derivative
+    """
+    Data Frame df_rate_of_change containing the 1st time derivative 
+    in parameters pictures, videos, comments, likes, and followers
+    """
+    # Create a copy of the dataframe for the first derivative
     df_rate_of_change = df.copy()
     parameters = ['followers', 'pictures', 'videos', 'comments', 'likes']
-    #I AM NOT YET GOING TO FILL NA'S WITH ZEROS BECAUSE THERE COULD BE OTHERS WHICH WE DONT WANT TO FILL
-    #add the first time derivative to each column
+    
+    # Add the first time derivative to each column
     df_rate_of_change['change in followers'] = df_rate_of_change['followers'].diff()
     df_rate_of_change.rename(columns={'pictures': 'change in pictures'}, inplace=True)
     df_rate_of_change.rename(columns={'videos': 'change in videos'}, inplace=True)
@@ -211,27 +213,32 @@ def derivatives_data(df):
     df_rate_of_change.rename(columns={'likes': 'change in likes'}, inplace=True)
     df_rate_of_change.drop(columns=['followers'], inplace=True)
 
-    """Data Frame df_curvature containing the 2nd time derivative in parameters pictures, videos, comments, likes and followers"""
+    """
+    Data Frame df_curvature containing the 2nd time derivative 
+    in parameters pictures, videos, comments, likes, and followers
+    """
     new_parameters = ['change in followers', 'change in pictures', 'change in videos', 'change in comments', 'change in likes']
-    #create copy for dataframe consisting of 2nd derivative
+    # Create a copy for the dataframe consisting of the 2nd derivative
     df_curvature = df_rate_of_change.copy()
-
-    #I AM NOT YET GOING TO FILL NA'S WITH ZEROS BECAUSE THERE COULD BE OTHERS WHICH WE DONT WANT TO FILL
-    #add the 2nd time derivative in the parameters to each column
+    
+    # Add the 2nd time derivative in the parameters to each column
     for i, parameter in enumerate(new_parameters):
         df_curvature[parameter] = df_rate_of_change[parameter].diff()
         df_curvature.rename(columns={ parameter : f'curvature in {parameters[i]}'}, inplace=True)
     
     return df_rate_of_change, df_curvature
 
-def normalization(df, df_allbrands = clean_data()[2]):
-    #create a new dataframe to make space for the normalized data
+def normalization(df, df_allbrands=clean_data()[2]):
+    """
+    Normalize the data frame by dividing each column by the corresponding 
+    sum of all columns using df_allbrands for each date.
+    """
+    # Create a new dataframe to make space for the normalized data
     df_normalized = df.copy()
     # Convert the 'period_end_date' column to datetime objects
     df_normalized['period_end_date'] = pd.to_datetime(df_normalized['period_end_date'])
 
-    #Normalization
-    #e.g. divide the number of followers for a company by the sum of all followers of all companies
+    # Normalization
     for date in df_normalized['period_end_date'].unique():
         # Get the indices where the 'period_end_date' matches the current date
         indices = (df_normalized['period_end_date'] == date)
