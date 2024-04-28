@@ -19,6 +19,9 @@ def data_process(origin_df, train_size=0.7, val_size = 0.2):
         val_df (_dataframe_): the validation data
         test_df (_dataframe_): the test data
         num_features (int): the number of features in the data
+    Code Reference:
+    Tensorflow official tutorial: Time series forecasting
+    https://www.tensorflow.org/tutorials/structured_data/time_series?_gl=1*1p89p8j*_up*MQ..*_ga*MTIzODE2NTMxNi4xNzE0MjU1NzIy*_ga_W0YLR4190T*MTcxNDI1NTcyMi4xLjAuMTcxNDI1NTcyMi4wLjAuMA..#baseline
     """
     df = origin_df.copy()
     n = len(df)
@@ -70,9 +73,24 @@ def data_process(origin_df, train_size=0.7, val_size = 0.2):
 
 
 class WindowGenerator():
+  """Handle the indexes and offsets of data. Split windows of features into (features, labels) pairs. Plot the content of the resulting windows. Efficiently generate batches of these windows from the training, evaluation, and test data, using tf.data.Datasets.
+  Code Reference:
+    Tensorflow official tutorial: Time series forecasting
+    https://www.tensorflow.org/tutorials/structured_data/time_series?_gl=1*1p89p8j*_up*MQ..*_ga*MTIzODE2NTMxNi4xNzE0MjU1NzIy*_ga_W0YLR4190T*MTcxNDI1NTcyMi4xLjAuMTcxNDI1NTcyMi4wLjAuMA..#baseline
+  """
   def __init__(self, input_width, label_width, shift,
                train_df, val_df, test_df,
                label_columns=None):
+    """init the WindowGenerator
+
+    Args:
+        input_width (int): the size of the input window
+        label_width (int): the size of the label window, also the size of the output window
+        shift (int): the size of the shift
+        train_df (dataframe): the training data
+        val_df (dataframe): the validation data
+        test_df (dataframe):  the test data
+    """
     # Store the raw data.
     self.train_df = train_df
     self.val_df = val_df
@@ -214,6 +232,8 @@ class WindowGenerator():
 
 # single output 1 step
 class SingleBaseline(tf.keras.Model):
+  """The baseline model directly return the current data as the prediction for single output 1 step
+  """
   def __init__(self, label_index=None):
     super().__init__()
     self.label_index = label_index
@@ -226,6 +246,8 @@ class SingleBaseline(tf.keras.Model):
 
 # multi_output 1 step
 class Baseline(tf.keras.Model):
+  """The difference of this file to the above is the output shape of the model. This model is for multi-output 1 step
+  """
   def __init__(self, label_index=None):
     super().__init__()
     self.label_index = label_index
