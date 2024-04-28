@@ -224,7 +224,7 @@ def derivatives_data(df):
     
     return df_rate_of_change, df_curvature
 
-def normalized_data_frame(df, df_allbrands = clean_data()[2]):
+def normalization(df, df_allbrands = clean_data()[2]):
     #create a new dataframe to make space for the normalized data
     df_normalized = df.copy()
     # Convert the 'period_end_date' column to datetime objects
